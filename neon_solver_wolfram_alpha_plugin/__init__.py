@@ -22,7 +22,11 @@
 # LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-import requests
+from datetime import timedelta
+import tempfile
+from os.path import join, isfile
+from requests_cache import CachedSession
+
 from neon_solvers import AbstractSolver
 
 
@@ -31,17 +35,32 @@ class WolframAlphaSolver(AbstractSolver):
         super(WolframAlphaSolver, self).__init__(name="WolframAlpha", priority=25, config=config)
         self.appid = self.config.get("appid") or "Y7R353-9HQAAL8KKA"
         self.units = self.config.get("units") or "metric"
+        self.session = CachedSession(backend="memory", expire_after=timedelta(minutes=5))
 
-    # spoken answers api
+    # image api (simple)
+    def get_image(self, query, context=None):
+        url = 'http://api.wolframalpha.com/v1/simple'
+        params = {"appid": self.appid,
+                  "i": query,
+                  "background": "F5F5F5",
+                  "layout": "labelbar",
+                  "units": self.units}
+        path = join(tempfile.gettempdir(), query.replace(" ", "_")+".gif")
+        if not isfile(path):
+            image = self.session.get(url, params=params).content
+            with open(path, "wb") as f:
+                f.write(image)
+        return path
+
+    # spoken answers api (spoken)
     def get_spoken_answer(self, query, context):
         url = 'http://api.wolframalpha.com/v1/spoken'
         params = {"appid": self.appid,
                   "i": query,
                   "units": self.units}
-        answer = requests.get(url, params=params).text
+        answer = self.session.get(url, params=params).text
         bad_answers = ["No spoken result available",
                        "Wolfram Alpha did not understand your input"]
         if answer in bad_answers:
             return None
         return answer
-

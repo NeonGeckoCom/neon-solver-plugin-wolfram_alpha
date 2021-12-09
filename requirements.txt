@@ -4,3 +4,4 @@ quebra_frases
 git+https://github.com/NeonGeckoCom/neon_utterance_RAKE_plugin
 requests
 neon-lang-plugin-libretranslate
+requests_cache
