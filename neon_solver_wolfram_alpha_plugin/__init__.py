@@ -59,8 +59,8 @@ class WolframAlphaSolver(AbstractSolver):
                   "i": query,
                   "units": self.units}
         answer = self.session.get(url, params=params).text
-        bad_answers = ["No spoken result available",
-                       "Wolfram Alpha did not understand your input"]
-        if answer in bad_answers:
+        bad_answers = ["no spoken result available",
+                       "wolfram alpha did not understand your input"]
+        if answer.lower().strip() in bad_answers:
             return None
         return answer
