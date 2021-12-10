@@ -22,12 +22,12 @@
 # LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-from datetime import timedelta
 import tempfile
+from datetime import timedelta
 from os.path import join, isfile
-from requests_cache import CachedSession
 
 from neon_solvers import AbstractSolver
+from requests_cache import CachedSession
 
 
 class WolframAlphaSolver(AbstractSolver):
@@ -37,15 +37,32 @@ class WolframAlphaSolver(AbstractSolver):
         self.units = self.config.get("units") or "metric"
         self.session = CachedSession(backend="memory", expire_after=timedelta(minutes=5))
 
+    # data api
+    def get_data(self, query, context=None):
+        """
+       query assured to be in self.default_lang
+       return a dict response
+       """
+        url = 'http://api.wolframalpha.com/v2/query'
+        params = {"appid": self.appid,
+                  "input": query,
+                  "output": "json",
+                  "units": self.units}
+        return self.session.get(url, params=params).json()
+
     # image api (simple)
     def get_image(self, query, context=None):
+        """
+        query assured to be in self.default_lang
+        return path/url to a single image to acompany spoken_answer
+        """
         url = 'http://api.wolframalpha.com/v1/simple'
         params = {"appid": self.appid,
                   "i": query,
-                  "background": "F5F5F5",
+                  # "background": "F5F5F5",
                   "layout": "labelbar",
                   "units": self.units}
-        path = join(tempfile.gettempdir(), query.replace(" ", "_")+".gif")
+        path = join(tempfile.gettempdir(), query.replace(" ", "_") + ".gif")
         if not isfile(path):
             image = self.session.get(url, params=params).content
             with open(path, "wb") as f:
@@ -54,6 +71,10 @@ class WolframAlphaSolver(AbstractSolver):
 
     # spoken answers api (spoken)
     def get_spoken_answer(self, query, context):
+        """
+        query assured to be in self.default_lang
+        return a single sentence text response
+        """
         url = 'http://api.wolframalpha.com/v1/spoken'
         params = {"appid": self.appid,
                   "i": query,
@@ -64,3 +85,59 @@ class WolframAlphaSolver(AbstractSolver):
         if answer.lower().strip() in bad_answers:
             return None
         return answer
+
+    def get_expanded_answer(self, query, context=None):
+        """
+        query assured to be in self.default_lang
+        return a list of ordered steps to expand the answer, eg, "tell me more"
+
+        {
+            "title": "optional",
+            "summary": "speak this",
+            "img": "optional/path/or/url
+        }
+
+        """
+        data = self.get_data(query, context)
+
+        skip = ['Input interpretation', 'Interpretation']
+        no_speak_titles = ['Wikipedia summary',
+                           'Biological properties',
+                           'Taxonomy']
+        steps = []
+        default_img = ""
+        for pod in data['queryresult']['pods']:
+            title = pod["title"]
+            if title in skip:
+                continue
+
+            for sub in pod["subpods"]:
+                subpod = {"title": title}
+                summary = sub["img"]["alt"]
+                subtitle = sub["img"]["title"]
+                if subtitle and subtitle != summary:
+                    subpod["title"] = subtitle
+
+                if summary == title:
+                    if title == "Image": # default picture
+                        default_img  = sub["img"]["src"]
+                        continue
+                    else:
+                        # it's an image result
+                        subpod["img"] = sub["img"]["src"]
+                elif summary.startswith("(") and summary.endswith(")"):
+                    continue
+                else:
+                    # make answer slightly more speech friendly
+                    if title not in no_speak_titles:
+                        summary = subpod["title"] + "\n" + summary
+                    subpod["summary"] = summary
+                steps.append(subpod)
+
+        # do any extra processing here
+        for idx, step in enumerate(steps):
+            if default_img and not step.get("img"):
+                step["img"] = default_img
+        return steps
+
+
