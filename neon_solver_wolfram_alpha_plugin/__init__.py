@@ -101,9 +101,6 @@ class WolframAlphaSolver(AbstractSolver):
         data = self.get_data(query, context)
 
         skip = ['Input interpretation', 'Interpretation']
-        no_speak_titles = ['Wikipedia summary',
-                           'Biological properties',
-                           'Taxonomy']
         steps = []
         default_img = ""
         for pod in data['queryresult']['pods']:
@@ -128,9 +125,6 @@ class WolframAlphaSolver(AbstractSolver):
                 elif summary.startswith("(") and summary.endswith(")"):
                     continue
                 else:
-                    # make answer slightly more speech friendly
-                    if title not in no_speak_titles:
-                        summary = subpod["title"] + "\n" + summary
                     subpod["summary"] = summary
                 steps.append(subpod)
 
