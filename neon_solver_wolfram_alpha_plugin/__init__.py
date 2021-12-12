@@ -30,6 +30,61 @@ from neon_solvers import AbstractSolver
 from requests_cache import CachedSession
 
 
+def make_speakable(summary):
+    # let's remove unwanted data from parantheses
+    #  - many results have (human: XX unit) ref values, remove them
+    if "(human: " in summary:
+        splits = summary.split("(human: ")
+        for idx, s in enumerate(splits):
+            splits[idx] = ")".join(s.split(")")[1:])
+        summary = " ".join(splits)
+
+    # remove duplicated units in text
+    # TODO probably there's a lot more to add here....
+    replaces = {
+        "cm (centimeters)": "centimeters",
+        "cm³ (cubic centimeters)": "cubic centimeters",
+        "cm² (square centimeters)": "square centimeters",
+        "mm (millimeters)": "millimeters",
+        "mm² (square millimeters)": "square millimeters",
+        "mm³ (cubic millimeters)": "cubic millimeters",
+        "kg (kilograms)": "kilograms",
+        "kHz (kilohertz)": "kilohertz",
+        "ns (nanoseconds)": "nanoseconds",
+        "µs (microseconds)": "microseconds",
+        "m/s (meters per second)": "meters per second",
+        "km/s (kilometers per second)": "kilometers per second",
+        "mi/s (miles per second)": "miles per second",
+        "mph (miles per hour)": "miles per hour",
+        "ª (degrees)": " degrees"
+    }
+    for k, v in replaces.items():
+        summary = summary.replace(k, v)
+
+    # replace units, only if they are individual words
+    units = {
+        "cm": "centimeters",
+        "cm³": "cubic centimeters",
+        "cm²": "square centimeters",
+        "mm": "millimeters",
+        "mm²": "square millimeters",
+        "mm³": "cubic millimeters",
+        "kg": "kilograms",
+        "kHz": "kilohertz",
+        "ns": "nanoseconds",
+        "µs": "microseconds",
+        "m/s": "meters per second",
+        "km/s": "kilometers per second",
+        "mi/s": "miles per second",
+        "mph": "miles per hour"
+    }
+    words = [w if w not in units else units[w]
+             for w in summary.split(" ")]
+    summary = " ".join(words)
+
+    return summary
+
+
 class WolframAlphaSolver(AbstractSolver):
     def __init__(self, config=None):
         super(WolframAlphaSolver, self).__init__(name="WolframAlpha", priority=25, config=config)
@@ -104,6 +159,7 @@ class WolframAlphaSolver(AbstractSolver):
                 'Result', 'Value', 'Image']
         steps = []
 
+        # TODO this seems to be missing some titles
         for pod in data['queryresult']['pods']:
             title = pod["title"]
             if title in skip:
@@ -112,7 +168,7 @@ class WolframAlphaSolver(AbstractSolver):
             for sub in pod["subpods"]:
                 subpod = {"title": title}
                 summary = sub["img"]["alt"]
-                subtitle = sub["img"]["title"]
+                subtitle = sub.get("title") or sub["img"]["title"]
                 if subtitle and subtitle != summary:
                     subpod["title"] = subtitle
 
@@ -130,15 +186,17 @@ class WolframAlphaSolver(AbstractSolver):
         for idx, step in enumerate(steps):
             # merge steps
             if step["title"] == prev:
-                summary = steps[idx-1]["summary"] + "\n" + step["summary"]
+                summary = steps[idx - 1]["summary"] + "\n" + step["summary"]
                 steps[idx]["summary"] = summary
-                steps[idx]["img"] = step.get("img") or steps[idx -1 ]["img"]
-                steps[idx-1] = None
-            elif step.get("summary"):
+                steps[idx]["img"] = step.get("img") or steps[idx - 1].get("img")
+                steps[idx - 1] = None
+            elif step.get("summary") and step["title"]:
                 # inject title in speech, eg we do not want wolfram to just read family names without context
-                steps[idx]["summary"] = step["title"] + "\n." + step["summary"]
+                steps[idx]["summary"] = step["title"] + ".\n" + step["summary"]
+
+            # normalize summary
+            if step.get("summary"):
+                steps[idx]["summary"] = make_speakable(steps[idx]["summary"])
 
             prev = step["title"]
         return [s for s in steps if s]
-
-
