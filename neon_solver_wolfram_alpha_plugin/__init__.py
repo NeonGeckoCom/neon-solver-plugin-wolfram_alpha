@@ -99,10 +99,11 @@ class WolframAlphaSolver(AbstractSolver):
 
         """
         data = self.get_data(query, context)
-
-        skip = ['Input interpretation', 'Interpretation']
+        # these are returned in spoken answer or otherwise unwanted
+        skip = ['Input interpretation', 'Interpretation',
+                'Result', 'Value', 'Image']
         steps = []
-        default_img = ""
+
         for pod in data['queryresult']['pods']:
             title = pod["title"]
             if title in skip:
@@ -116,12 +117,8 @@ class WolframAlphaSolver(AbstractSolver):
                     subpod["title"] = subtitle
 
                 if summary == title:
-                    if title == "Image": # default picture
-                        default_img  = sub["img"]["src"]
-                        continue
-                    else:
-                        # it's an image result
-                        subpod["img"] = sub["img"]["src"]
+                    # it's an image result
+                    subpod["img"] = sub["img"]["src"]
                 elif summary.startswith("(") and summary.endswith(")"):
                     continue
                 else:
@@ -129,9 +126,19 @@ class WolframAlphaSolver(AbstractSolver):
                 steps.append(subpod)
 
         # do any extra processing here
+        prev = ""
         for idx, step in enumerate(steps):
-            if default_img and not step.get("img"):
-                step["img"] = default_img
-        return steps
+            # merge steps
+            if step["title"] == prev:
+                summary = steps[idx-1]["summary"] + "\n" + step["summary"]
+                steps[idx]["summary"] = summary
+                steps[idx]["img"] = step.get("img") or steps[idx -1 ]["img"]
+                steps[idx-1] = None
+            elif step.get("summary"):
+                # inject title in speech, eg we do not want wolfram to just read family names without context
+                steps[idx]["summary"] = step["title"] + "\n." + step["summary"]
+
+            prev = step["title"]
+        return [s for s in steps if s]
 
 
