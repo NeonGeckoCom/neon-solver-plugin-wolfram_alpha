@@ -159,8 +159,7 @@ class WolframAlphaSolver(AbstractSolver):
                 'Result', 'Value', 'Image']
         steps = []
 
-        # TODO this seems to be missing some titles
-        for pod in data['queryresult']['pods']:
+        for pod in data['queryresult'].get('pods', []):
             title = pod["title"]
             if title in skip:
                 continue
