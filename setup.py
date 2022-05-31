@@ -20,10 +20,19 @@ with open("README.md", "r") as f:
     long_description = f.read()
 
 
+with open("./version.py", "r", encoding="utf-8") as v:
+    for line in v.readlines():
+        if line.startswith("__version__"):
+            if '"' in line:
+                version = line.split('"')[1]
+            else:
+                version = line.split("'")[1]
+
+
 PLUGIN_ENTRY_POINT = 'neon_solver_wolfram_alpha_plugin=neon_solver_wolfram_alpha_plugin:WolframAlpha'
 setup(
     name='neon_solver_wolfram_alpha_plugin',
-    version='0.0.1',
+    version=version,
     description='A question solver plugin for ovos/neon/mycroft',
     url='https://github.com/NeonGeckoCom/neon_solver_wolfram_alpha_plugin',
     author='Neongecko',
