@@ -159,8 +159,7 @@ class WolframAlphaSolver(AbstractSolver):
                 'Result', 'Value', 'Image']
         steps = []
 
-        # TODO this seems to be missing some titles
-        for pod in data['queryresult']['pods']:
+        for pod in data['queryresult'].get('pods', []):
             title = pod["title"]
             if title in skip:
                 continue
@@ -200,3 +199,49 @@ class WolframAlphaSolver(AbstractSolver):
 
             prev = step["title"]
         return [s for s in steps if s]
+
+
+if __name__ == "__main__":
+    d = WolframAlphaSolver()
+
+    query = "who is Isaac Newton"
+
+    # full answer
+    ans = d.spoken_answer(query)
+    print(ans)
+    # Sir Isaac Newton (25 December 1642 – 20 March 1726/27) was an English mathematician, physicist, astronomer, alchemist, theologian, and author (described in his time as a "natural philosopher") widely recognised as one of the greatest mathematicians and physicists of all time and among the most influential scientists.
+
+    ans = d.visual_answer(query)
+    print(ans)
+    # /tmp/who_is_Isaac_Newton.gif
+
+    # chunked answer, "tell me more"
+    for sentence in d.long_answer(query):
+        print("#", sentence["title"])
+        print(sentence.get("summary"), sentence.get("img"))
+
+        # who is Isaac Newton
+        # Sir Isaac Newton was an English mathematician, physicist, astronomer, alchemist, theologian, and author widely recognised as one of the greatest mathematicians and physicists of all time and among the most influential scientists.
+        # https://duckduckgo.com/i/ea7be744.jpg
+
+        # who is Isaac Newton
+        # He was a key figure in the philosophical revolution known as the Enlightenment.
+        # https://duckduckgo.com/i/ea7be744.jpg
+
+        # who is Isaac Newton
+        # His book Philosophiæ Naturalis Principia Mathematica, first published in 1687, established classical mechanics.
+        # https://duckduckgo.com/i/ea7be744.jpg
+
+        # who is Isaac Newton
+        # Newton also made seminal contributions to optics, and shares credit with German mathematician Gottfried Wilhelm Leibniz for developing infinitesimal calculus.
+        # https://duckduckgo.com/i/ea7be744.jpg
+
+        # who is Isaac Newton
+        # In the Principia, Newton formulated the laws of motion and universal gravitation that formed the dominant scientific viewpoint until it was superseded by the theory of relativity.
+        # https://duckduckgo.com/i/ea7be744.jpg
+
+    # bidirectional auto translate by passing lang context
+    sentence = d.spoken_answer("Quem é Isaac Newton",
+                               context={"lang": "pt"})
+    print(sentence)
+    # Sir Isaac Newton (25 de dezembro de 1642 - 20 de março de 1726/27) foi um matemático, físico, astrônomo, alquimista, teólogo e autor (descrito em seu tempo como um "filósofo natural") amplamente reconhecido como um dos maiores matemáticos e físicos de todos os tempos e entre os cientistas mais influentes
