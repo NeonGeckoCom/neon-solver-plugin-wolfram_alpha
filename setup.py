@@ -29,7 +29,7 @@ with open("./version.py", "r", encoding="utf-8") as v:
                 version = line.split("'")[1]
 
 
-PLUGIN_ENTRY_POINT = 'neon_solver_wolfram_alpha_plugin=neon_solver_wolfram_alpha_plugin:WolframAlpha'
+PLUGIN_ENTRY_POINT = 'neon_solver_wolfram_alpha_plugin=neon_solver_wolfram_alpha_plugin:WolframAlphaSolver'
 setup(
     name='neon_solver_wolfram_alpha_plugin',
     version=version,
