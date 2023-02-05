@@ -87,7 +87,10 @@ def make_speakable(summary):
 
 class WolframAlphaSolver(AbstractSolver):
     def __init__(self, config=None):
-        super().__init__(name="WolframAlpha", priority=25, config=config, enable_cache=True, enable_tx=True)
+        config = config or {}
+        config["lang"] = "en"  # only supports english
+        super().__init__(name="WolframAlpha", priority=25, config=config,
+                         enable_cache=True, enable_tx=True)
         self.appid = self.config.get("appid") or "Y7R353-9HQAAL8KKA"
         self.units = self.config.get("units") or "metric"
         self.session = CachedSession(backend="memory", expire_after=timedelta(minutes=5))
