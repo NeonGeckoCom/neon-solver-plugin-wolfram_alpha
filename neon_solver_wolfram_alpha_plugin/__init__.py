@@ -88,11 +88,14 @@ def make_speakable(summary):
 
 
 class WolframAlphaSolver(QuestionSolver):
+    priority = 25
+    enable_cache = True
+    enable_tx = True
+
     def __init__(self, config=None):
         config = config or {}
         config["lang"] = "en"  # only supports english
-        super().__init__(name="WolframAlpha", priority=25, config=config,
-                         enable_cache=True, enable_tx=True)
+        super().__init__(config=config)
         self.api = WolframAlphaApi(key=self.config.get("appid") or "Y7R353-9HQAAL8KKA")
         # TODO - debug, key doesnt seem to be passed along to base class ???
         self.api.backend.credentials = self.api.credentials
