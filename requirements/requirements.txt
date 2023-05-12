@@ -1,4 +1,5 @@
-neon_solvers~=0.0,>=0.0.2a1
+ovos-plugin-manager
+ovos-backend-client
 requests
 neon-lang-plugin-libretranslate
 requests_cache
