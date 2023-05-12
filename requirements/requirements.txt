@@ -1,4 +1,4 @@
-ovos-plugin-manager
+ovos-plugin-manager>=0.0.23a13
 ovos-backend-client
 requests
 neon-lang-plugin-libretranslate
