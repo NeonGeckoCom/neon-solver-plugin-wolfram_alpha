@@ -29,7 +29,9 @@ with open("./version.py", "r", encoding="utf-8") as v:
                 version = line.split("'")[1]
 
 
-PLUGIN_ENTRY_POINT = 'neon_solver_wolfram_alpha_plugin=neon_solver_wolfram_alpha_plugin:WolframAlpha'
+PLUGIN_ENTRY_POINT = 'neon_solver_wolfram_alpha_plugin=neon_solver_wolfram_alpha_plugin:WolframAlphaSolver'
+PERSONA_ENTRY_POINT = 'neon-wolfie=neon_solver_wolfram_alpha_plugin:WOLFIE_PERSONA'
+
 setup(
     name='neon_solver_wolfram_alpha_plugin',
     version=version,
@@ -41,7 +43,8 @@ setup(
     packages=['neon_solver_wolfram_alpha_plugin'],
     zip_safe=True,
     keywords='mycroft plugin utterance fallback query',
-    entry_points={'neon.plugin.solver': PLUGIN_ENTRY_POINT},
+    entry_points={'neon.plugin.solver': PLUGIN_ENTRY_POINT,
+                  "opm.plugin.persona": PERSONA_ENTRY_POINT},
     install_requires=required("requirements/requirements.txt"),
     long_description=long_description,
     long_description_content_type='text/markdown'

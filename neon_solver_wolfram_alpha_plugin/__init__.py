@@ -26,7 +26,9 @@ import tempfile
 from datetime import timedelta
 from os.path import join, isfile
 
-from neon_solvers import AbstractSolver
+from ovos_config import Configuration
+from ovos_backend_client.api import WolframAlphaApi
+from ovos_plugin_manager.templates.solvers import QuestionSolver
 from requests_cache import CachedSession
 
 
@@ -85,11 +87,19 @@ def make_speakable(summary):
     return summary
 
 
-class WolframAlphaSolver(AbstractSolver):
+class WolframAlphaSolver(QuestionSolver):
+    priority = 25
+    enable_cache = True
+    enable_tx = True
+
     def __init__(self, config=None):
-        super(WolframAlphaSolver, self).__init__(name="WolframAlpha", priority=25, config=config)
-        self.appid = self.config.get("appid") or "Y7R353-9HQAAL8KKA"
-        self.units = self.config.get("units") or "metric"
+        config = config or {}
+        config["lang"] = "en"  # only supports english
+        super().__init__(config=config)
+        self.api = WolframAlphaApi(key=self.config.get("appid") or "Y7R353-9HQAAL8KKA")
+        # TODO - debug, key doesnt seem to be passed along to base class ???
+        self.api.backend.credentials = self.api.credentials
+
         self.session = CachedSession(backend="memory", expire_after=timedelta(minutes=5))
 
     # data api
@@ -98,12 +108,8 @@ class WolframAlphaSolver(AbstractSolver):
        query assured to be in self.default_lang
        return a dict response
        """
-        url = 'http://api.wolframalpha.com/v2/query'
-        params = {"appid": self.appid,
-                  "input": query,
-                  "output": "json",
-                  "units": self.units}
-        return self.session.get(url, params=params).json()
+        units = Configuration().get("system_unit", "metric")
+        return self.api.full_results(query, units=units)
 
     # image api (simple)
     def get_image(self, query, context=None):
@@ -111,12 +117,14 @@ class WolframAlphaSolver(AbstractSolver):
         query assured to be in self.default_lang
         return path/url to a single image to acompany spoken_answer
         """
+        # TODO - extend backend-client method for picture
+        units = Configuration().get("system_unit", "metric")
         url = 'http://api.wolframalpha.com/v1/simple'
-        params = {"appid": self.appid,
+        params = {"appid": self.api.credentials["wolfram"],
                   "i": query,
                   # "background": "F5F5F5",
                   "layout": "labelbar",
-                  "units": self.units}
+                  "units": units}
         path = join(tempfile.gettempdir(), query.replace(" ", "_") + ".gif")
         if not isfile(path):
             image = self.session.get(url, params=params).content
@@ -130,11 +138,8 @@ class WolframAlphaSolver(AbstractSolver):
         query assured to be in self.default_lang
         return a single sentence text response
         """
-        url = 'http://api.wolframalpha.com/v1/spoken'
-        params = {"appid": self.appid,
-                  "i": query,
-                  "units": self.units}
-        answer = self.session.get(url, params=params).text
+        units = Configuration().get("system_unit", "metric")
+        answer = self.api.spoken(query, units=units)
         bad_answers = ["no spoken result available",
                        "wolfram alpha did not understand your input"]
         if answer.lower().strip() in bad_answers:
@@ -200,6 +205,22 @@ class WolframAlphaSolver(AbstractSolver):
             prev = step["title"]
         return [s for s in steps if s]
 
+
+WOLFIE_PERSONA = {
+  "gender": "male",
+  "attitudes": {
+    "//": "this is WIP, a enum and value range will be defined later",
+    "normal": 100,
+    "funny": 0,
+    "sarcastic": 0,
+    "irritable": 0
+  },
+  "//": "these plugins are the brain of this persona",
+  "solvers": [
+    "neon_solver_wolfram_alpha_plugin",
+    "ovos-solver-failure-plugin"
+  ]
+}
 
 if __name__ == "__main__":
     d = WolframAlphaSolver()
