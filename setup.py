@@ -30,7 +30,7 @@ with open("./version.py", "r", encoding="utf-8") as v:
 
 
 PLUGIN_ENTRY_POINT = 'neon_solver_wolfram_alpha_plugin=neon_solver_wolfram_alpha_plugin:WolframAlphaSolver'
-PERSONA_ENTRY_POINT = 'wolfie=neon_solver_wolfram_alpha_plugin:WOLFIE_PERSONA'
+PERSONA_ENTRY_POINT = 'neon-wolfie=neon_solver_wolfram_alpha_plugin:WOLFIE_PERSONA'
 
 setup(
     name='neon_solver_wolfram_alpha_plugin',
